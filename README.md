@@ -28,5 +28,3 @@ The goal of the game is to remove all the pegs from the board.
 # What is the something extra?
 Our game will include a solver that, given the state of a Peg Solitaire game, will produce the steps needed to solve that game. Users can use this as a ‘hint’, to help them get unstuck, or just to complete the game for them.
 
-We can implement this solver using depth-first search. We can represent the board as an array of pegs, where each index keeps track of whether a peg has been placed in that position on the board. We will also need to keep a fixed mapping of moves that we can filter based on the given state to generate the next state. The goal node will simply be an array where all entries are 0.
-
