@@ -2,8 +2,9 @@ import Data.Array
 import Data.Maybe
 import Data.List
 import Data.Maybe (isJust)
+import Control.Monad.RWS (MonadState(state))
 type Board = [[BoardEntry]]
-type BoardEntry = (Coordinate, Integer) -- status is one of 1=filled 0=empty -1=invalid
+type BoardEntry = (Coordinate, Int) -- status is one of 1=filled 0=empty -1=invalid
 type Coordinate = String
 type Move = (Coordinate, Coordinate, Coordinate) -- (Start, Middle, End)
 
@@ -73,12 +74,12 @@ generate_legal_moves starting_board =
 
 
 -- dieter
-generate_valid_moves :: Board -> [Move]
+update_valid_moves :: Board -> [Move]
 -- For each board entry, try all 4 legal moves?
     -- Starting position == 1
     -- Middle position == 1
     -- Ending position == 0
-generate_valid_moves board = 
+update_valid_moves board = 
   let legal = generate_legal_moves starting_board
    in filter (\(start, mid, end) -> 
         let startEntry = get_board_entry board start
@@ -87,13 +88,14 @@ generate_valid_moves board =
         in isJust startEntry && isJust midEntry && isJust endEntry -- check that the coord exists
            && snd (fromJust startEntry) == 1 -- a peg must be in the starting hole
            && snd (fromJust midEntry) == 1 -- there must be a peg to jump over
-           && snd (fromJust endEntry) == 0) legal -- there must be a spot for the peg to land
+           && snd (fromJust endEntry) == 0) -- there must be a spot for the peg to land
+           legal 
 
 -- Takes a game board and a coordinate, returns BoardEntry for that coordinate 
 get_board_entry :: Board -> Coordinate -> Maybe BoardEntry 
 get_board_entry board coord =
-    let row = (fromEnum (head coord))-65 
-    in find (\entry -> fst entry == coord) (board!!(row+2))
+    let row = (fromEnum (head coord))-65
+    in find (match_entry coord) (board!!(row+2))
 
 
 --Nate
@@ -104,14 +106,47 @@ get_board_entry board coord =
 --get_move :: IO () -> Move
 --get_move =
 
-update_valid_moves :: State -> Move -> State
-update_valid_moves st mv = st
-
 check_valid_move :: State -> Move -> Bool
 check_valid_move st mv = True
 
+-- Returns a new game state with the move performed
 update_game_state :: State -> Move -> State
-update_game_state st mv = st
+update_game_state (State board moves) move =
+  let newBoard = perform_move board move
+      newMoves = update_valid_moves newBoard 
+  in  State newBoard newMoves 
+
+-- Performs the given move on the game state
+-- Removes the peg from the Starting and Middle positions
+-- Adds a peg to the end position
+perform_move :: Board -> Move -> Board 
+perform_move board (start, middle, end) =
+  let b1 = modify_board_position board start 0
+      b2 = modify_board_position b1 middle 0
+  in modify_board_position b2 end 1
+
+
+-- Consumes a board, coordinate, and state
+-- Returns a new board with the status set to newState
+modify_board_position :: Board -> Coordinate -> Int -> Board
+modify_board_position board coord newState =
+  let row = get_row_number coord 
+      index = case findIndex (match_entry coord) (board!!(row+2)) of
+              Just index -> index
+              Nothing -> 0
+      (start,elem:rest) = splitAt index (board!!(row+2)) -- Split list
+      newRow = start ++ ((fst elem), newState) : rest -- Modify the row and splice it together
+  in take (row + 2) board ++ [newRow] ++ drop (row + 3) board -- Replace the old row with the new row
+
+
+-- Consumes a coordinate and returns the corresponding row number
+-- Does not accounting for padding in the game board
+get_row_number :: Coordinate -> Int
+get_row_number coord = (fromEnum (head coord)) - fromEnum('A')
+
+-- Return true if the coordiante matches the coordiante in the board entry
+match_entry :: Coordinate -> BoardEntry -> Bool
+match_entry coord entry = fst entry == coord
 
 win :: State -> Bool
 win st = True
