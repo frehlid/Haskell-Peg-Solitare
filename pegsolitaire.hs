@@ -19,6 +19,15 @@ data Result = EndOfGame State
 type Game = Move -> State -> Result
 
 
+-------- USAGE --------
+-- To perform a move:
+--    st = State starting_board (generate_valid_moves starting_board)
+--    newSt = update_game_state st ("B4","C4","D4")
+--    (show st and newSt to see difference)
+-- To see valid moves for a board:
+--    example_board = starting_board
+--    generate_valid_moves starting_board
+
 -- Game logic
 --peg_solitaire :: Game
 
@@ -74,12 +83,12 @@ generate_legal_moves starting_board =
 
 
 -- dieter
-update_valid_moves :: Board -> [Move]
+generate_valid_moves :: Board -> [Move]
 -- For each board entry, try all 4 legal moves?
     -- Starting position == 1
     -- Middle position == 1
     -- Ending position == 0
-update_valid_moves board = 
+generate_valid_moves board = 
   let legal = generate_legal_moves starting_board
    in filter (\(start, mid, end) -> 
         let startEntry = get_board_entry board start
@@ -113,7 +122,7 @@ check_valid_move st mv = True
 update_game_state :: State -> Move -> State
 update_game_state (State board moves) move =
   let newBoard = perform_move board move
-      newMoves = update_valid_moves newBoard 
+      newMoves = generate_valid_moves newBoard 
   in  State newBoard newMoves 
 
 -- Performs the given move on the game state
@@ -134,9 +143,10 @@ modify_board_position board coord newState =
       index = case findIndex (match_entry coord) (board!!(row+2)) of
               Just index -> index
               Nothing -> 0
-      (start,elem:rest) = splitAt index (board!!(row+2)) -- Split list
+      (start,elem:rest) = splitAt index (board!!(row+2)) -- Split the row 
       newRow = start ++ ((fst elem), newState) : rest -- Modify the row and splice it together
-  in take (row + 2) board ++ [newRow] ++ drop (row + 3) board -- Replace the old row with the new row
+      (firstRows,_:restRows) = splitAt (row+2) board -- Split the list of rows
+  in  firstRows ++ [newRow] ++ restRows -- Replace the old row with the new row
 
 
 -- Consumes a coordinate and returns the corresponding row number
