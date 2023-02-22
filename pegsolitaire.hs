@@ -158,5 +158,9 @@ get_row_number coord = (fromEnum (head coord)) - fromEnum('A')
 match_entry :: Coordinate -> BoardEntry -> Bool
 match_entry coord entry = fst entry == coord
 
+-- Only one position left in the board with a filled peg
 win :: State -> Bool
-win st = True
+win (State board moves) =
+  let flattenedBoard = concat board in 
+  length (filter (\entry -> (snd entry) == 1) flattenedBoard) == 1
+
