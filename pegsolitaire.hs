@@ -20,7 +20,7 @@ data Result = EndOfGame State
 type Game = Move -> State -> Result
 
 
-type Mem = Dict State (Board, [Move])
+type Mem = Dict State [Move]
 
 
 -------- USAGE --------
@@ -53,6 +53,22 @@ starting_board =
   [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)]]
 
+
+win_board :: Board
+win_board =
+  [[("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
+  [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
+  [("",-1),("",-1),("",-1),("",-1),("A3",0),("A4",0),("A5",0),("",-1),("",-1),("",-1),("",-1)],
+  [("",-1),("",-1),("",-1),("",-1),("B3",0),("B4",0),("B5",0),("",-1),("",-1),("",-1),("",-1)],
+  [("",-1),("",-1),("C1",0),("C2",0),("C3",0),("C4",0),("C5",0),("C6",0),("C7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("D1",0),("D2",0),("D3",0),("D4",1),("D5",0),("D6",0),("D7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("E1",0),("E2",0),("E3",0),("E4",0),("E5",0),("E6",0),("E7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("",-1),("",-1),("F3",0),("F4",0),("F5",0),("",-1),("",-1),("",-1),("",-1)],
+  [("",-1),("",-1),("",-1),("",-1),("G3",0),("G4",0),("G5",0),("",-1),("",-1),("",-1),("",-1)],
+  [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
+  [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)]]
+
+
 almost_win_board :: Board
 almost_win_board =
   [[("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
@@ -60,9 +76,9 @@ almost_win_board =
   [("",-1),("",-1),("",-1),("",-1),("A3",0),("A4",0),("A5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("B3",0),("B4",0),("B5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("C1",0),("C2",0),("C3",0),("C4",0),("C5",0),("C6",0),("C7",0),("",-1),("",-1)],
-  [("",-1),("",-1),("D1",0),("D2",1),("D3",1),("D4",0),("D5",0),("D6",0),("D7",0),("",-1),("",-1)],
-  [("",-1),("",-1),("E1",0),("E2",0),("E3",0),("E4",0),("E5",0),("E6",0),("E7",0),("",-1),("",-1)],
-  [("",-1),("",-1),("",-1),("",-1),("F3",0),("F4",0),("F5",0),("",-1),("",-1),("",-1),("",-1)],
+  [("",-1),("",-1),("D1",0),("D2",1),("D3",0),("D4",0),("D5",0),("D6",0),("D7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("E1",0),("E2",0),("E3",1),("E4",0),("E5",0),("E6",0),("E7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("",-1),("",-1),("F3",1),("F4",0),("F5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("G3",0),("G4",0),("G5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)]]
@@ -164,25 +180,42 @@ play (State bd moves) =
         play newState
 
 
-solve :: State -> [Move] -> Mem -> Maybe ((State, [Move]), Mem)
-solve (State bd moves) moves_played memory =
-    let stored_result = getval bd memory in
+--solve :: State -> [Move] -> Mem -> Maybe ((State, [Move]), Mem)
+--solve (State bd moves) moves_played memory =
+--    let stored_result = getval bd memory in
+--    if (isJust stored_result) then
+--        Just (((State bd moves), fromJust stored_result), memory)
+--    if (win (State bd moves)) then
+--        Just (((State bd moves), moves_played), memory)
+--    else if (lose (State bd moves)) then
+--        Nothing
+--    else
+--        let states = map (\ move -> (update_game_state (State bd moves) move, (move:moves_played))) moves in
+--        let results = map (\ state ->
+--            let result = solve (fst (fst state)) (snd (fst state)) memory) states in
+--            if (isJust result) then
+--                let memory = insertval (fst (fst (fromJust result))) (snd (fst (fromJust result))) memory
+--        foldr (\ result rest -> if isJust result then result else rest) Nothing results
+--
+--solve_helper (State bd moves) move moves_played memory =
+--    let newMoves = (move:moves_played)
+--        newState = update_game_state (State bd moves) move
+--        newMemory =  insertval (get_board newState) newMoves in
+--        solve
 
-    if (isJust stored_result) then
-        Just (((State bd moves), fromJust stored_result), memory)
+solve :: State -> [Move] -> [(State, Move)] -> [State] -> Maybe ((State, [Move]))
+solve (State bd moves) played next_states visited =
+    let nextStatesNew = (map (\ move -> ((update_game_state (State bd moves) move), move)) moves) ++ next_states
+        nextStatesFiltered = filter (\ (ns, _) -> notElem ns visited) nextStatesNew in
     if (win (State bd moves)) then
-        Just (((State bd moves), moves_played), memory)
-    else if (lose (State bd moves)) then
+        Just ((State bd moves), played)
+    else if (nextStatesNew == []) then
         Nothing
     else
-        let states = map (\ move -> (update_game_state (State bd moves) move, (move:moves_played))) moves in
-        let results = map (\ state ->
-            let result = solve (fst (fst state)) (snd (fst state)) memory) states in
-            if (isJust result) then
-                let memory = insertval (fst (fst (fromJust result))) (snd (fst (fromJust result))) memory
-        foldr (\ result rest -> if isJust result then result else rest) Nothing results
-
-
+        let (nextStateTuple:restStates) = nextStatesNew
+            nextState = fst nextStateTuple
+            nextMove = snd nextStateTuple in
+            solve nextState (nextMove:played) restStates ((State bd moves):visited)
 
 
 
