@@ -9,6 +9,9 @@ type BoardEntry = (Coordinate, Int) -- status is one of 1=filled 0=empty -1=inva
 type Coordinate = String
 type Move = (Coordinate, Coordinate, Coordinate) -- (Start, Middle, End)
 
+
+
+
 -- Based off of magicsum.hs from class
 data State = State Board [Move]
     deriving (Ord, Eq, Show)
@@ -75,10 +78,10 @@ almost_win_board =
   [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("A3",0),("A4",0),("A5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("B3",0),("B4",0),("B5",0),("",-1),("",-1),("",-1),("",-1)],
-  [("",-1),("",-1),("C1",0),("C2",0),("C3",0),("C4",0),("C5",0),("C6",0),("C7",0),("",-1),("",-1)],
-  [("",-1),("",-1),("D1",0),("D2",1),("D3",0),("D4",0),("D5",0),("D6",0),("D7",0),("",-1),("",-1)],
-  [("",-1),("",-1),("E1",0),("E2",0),("E3",1),("E4",0),("E5",0),("E6",0),("E7",0),("",-1),("",-1)],
-  [("",-1),("",-1),("",-1),("",-1),("F3",1),("F4",0),("F5",0),("",-1),("",-1),("",-1),("",-1)],
+  [("",-1),("",-1),("C1",1),("C2",1),("C3",1),("C4",0),("C5",0),("C6",0),("C7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("D1",1),("D2",1),("D3",1),("D4",0),("D5",0),("D6",0),("D7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("E1",1),("E2",1),("E3",1),("E4",0),("E5",0),("E6",0),("E7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("",-1),("",-1),("F3",1),("F4",1),("F5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("G3",0),("G4",0),("G5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)]]
@@ -209,14 +212,34 @@ solve (State bd moves) played next_states visited =
         nextStatesFiltered = filter (\ (ns, _) -> notElem ns visited) nextStatesNew in
     if (win (State bd moves)) then
         Just ((State bd moves), played)
-    else if (nextStatesNew == []) then
+    else if (nextStatesFiltered == []) then
         Nothing
     else
-        let (nextStateTuple:restStates) = nextStatesNew
+        let (nextStateTuple:restStates) = nextStatesFiltered
             nextState = fst nextStateTuple
             nextMove = snd nextStateTuple in
             solve nextState (nextMove:played) restStates ((State bd moves):visited)
 
+
+-- Hash must return the same value for rotationally symmetric boards
+
+-- LRTB
+--hash board =
+
+
+-- TBRL
+
+-- RLBT
+
+-- BTLR
+
+-- TBLR
+
+-- RLTB
+
+-- RLBT
+
+-- LRBT
 
 
 parse_move :: [Move] -> IO Move
