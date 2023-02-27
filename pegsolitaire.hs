@@ -2,7 +2,9 @@ import Data.Array
 import Data.Maybe
 import Data.List
 import Data.Maybe (isJust)
-import TreeDict
+import HashTreeDict
+import Data.PriorityQueue.FingerTree
+import Debug.Trace
 import qualified Data.Set as Set
 
 type Board = [[BoardEntry]]
@@ -21,7 +23,9 @@ data Result = EndOfGame State
 type Game = Move -> State -> Result
 
 
-type Mem = Dict State Bool
+type Mem = Dict Int (Bool, [Move])
+
+type PQ = PQueue Int (State, [Move])
 
 
 -------- USAGE --------
@@ -76,9 +80,9 @@ almost_win_board =
   [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("A3",0),("A4",0),("A5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("B3",0),("B4",0),("B5",0),("",-1),("",-1),("",-1),("",-1)],
-  [("",-1),("",-1),("C1",0),("C2",0),("C3",0),("C4",0),("C5",0),("C6",0),("C7",0),("",-1),("",-1)],
-  [("",-1),("",-1),("D1",0),("D2",1),("D3",1),("D4",0),("D5",0),("D6",0),("D7",0),("",-1),("",-1)],
-  [("",-1),("",-1),("E1",0),("E2",0),("E3",0),("E4",0),("E5",0),("E6",0),("E7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("C1",1),("C2",1),("C3",1),("C4",0),("C5",1),("C6",1),("C7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("D1",1),("D2",1),("D3",1),("D4",0),("D5",1),("D6",1),("D7",0),("",-1),("",-1)],
+  [("",-1),("",-1),("E1",1),("E2",1),("E3",1),("E4",0),("E5",1),("E6",1),("E7",0),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("F3",0),("F4",0),("F5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("G3",0),("G4",0),("G5",0),("",-1),("",-1),("",-1),("",-1)],
   [("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1),("",-1)],
@@ -185,7 +189,12 @@ play (State bd moves) =
   do
     display_board bd
     move <- parse_move moves
+    display_move bd move
+    putStrLn "      |  |  |       "
+    putStrLn "      V  V  V       "
+    putStrLn "                    "
     let newState = update_game_state (State bd moves) move
+    display_board (get_board newState)
     if (win newState) then do
         display_board (get_board newState)
         putStrLn "You win!"
@@ -193,14 +202,31 @@ play (State bd moves) =
         display_board (get_board newState)
         putStrLn "You lose :("
     else do
-        putStrLn "Please select one of the following options:"
-        putStrLn "Continue - Hint - Solve"
-        play newState
+        continue newState
 
+continue :: State -> IO ()
+continue newState = do
+               putStrLn "Please select one of the following options:"
+               putStrLn "(C)ontinue - (S)top"
+               choiceUnFixed <- getLine
+               let choice = fixdel choiceUnFixed
+               if (choice == "Continue" || choice == "C" || choice == "c") then
+                  play newState
+               else if (choice == "Stop" || choice == "quit" || choice == "S" || choice == "s") then
+                   putStrLn "Bye!"
+               else do
+                    putStrLn "That is not a valid choice, please try again"
+                    continue newState
+
+
+fixdel :: String -> String
+fixdel lst = foldl (\acc x -> if (x=='\DEL')
+                                then (if (length acc > 0) then init acc else acc)
+                              else (acc++[x])) [] lst
 
 --solve :: State -> [Move] -> Mem -> Maybe ((State, [Move]), Mem)
 --solve (State bd moves) moves_played memory =
---    let stored_result = getval bd memory in
+--    let stored_result = etval bd memory in
 --    if (isJust stored_result) then
 --        Just (((State bd moves), fromJust stored_result), memory)
 --    if (win (State bd moves)) then
@@ -254,30 +280,30 @@ play (State bd moves) =
 --            (nextState, nextMove, nextPlayed) = nextStateTriple in
 --            solve nextState (nextPlayed ++ [nextMove]) restStates ((State bd moves):visited)
 
-
-stateInVisited state visited = getval state visited
-
-solve :: [(State, Move, [Move])] -> Mem -> (Bool, [Move], Mem)
-solve frontier visited =
-    if (frontier == []) then
-            (False, [], visited)
-    else
-        let (newState@(State board moves), newMove, newPlayed) = head frontier in
-        if (win newState) then
-            (True, newPlayed, visited)
-        else case stateInVisited newState visited of
-            Just bool -> solve (tail frontier) visited
-            Nothing ->
-                    let newFrontierValues = map (\ move -> ((update_game_state newState move), move, (move:newPlayed))) moves
-                        nextFrontier = newFrontierValues ++ frontier
-                        nextVisited = insertval newState True visited
-                        res = solve (tail nextFrontier) nextVisited in
-                        case res of
-                            (True, _, _) -> res
-                            (False, _, rvisited) -> solve (tail nextFrontier) rvisited
-
-
-test_frontier = map (\ move -> ((update_game_state startState move), move, (move:[]))) (generate_valid_moves (get_board startState))
+--
+--stateInVisited state visited = getval state visited
+--
+--solve :: [(State, Move, [Move])] -> Mem -> (Bool, [Move], Mem)
+--solve frontier visited =
+--    if (frontier == []) then
+--            (False, [], visited)
+--    else
+--        let (newState@(State board moves), newMove, newPlayed) = head frontier
+--            hash = hash_b board in
+--        if (win newState) then
+--            (True, newPlayed, visited)
+--        else case stateInVisited hash visited of
+--            Just bool -> (bool, newPlayed, visited)
+--            Nothing ->
+--                    let newFrontierValues = map (\ move -> ((update_game_state newState move), move, (move:newPlayed))) moves
+--                        nextFrontier = newFrontierValues ++ frontier
+--                        res = solve (tail nextFrontier) visited in
+--                        case res of
+--                            (True, _, _) -> res
+--                            (False, _, rvisited) -> solve (tail nextFrontier) (insertval hash False rvisited)
+--
+--
+--test_frontier = map (\ move -> ((update_game_state endGameStateWin move), move, (move:[]))) (generate_valid_moves (get_board endGameStateWin))
 
 ----
 --solve :: State -> [Move] -> Set.Set State -> Maybe ((State, [Move]))
@@ -310,7 +336,7 @@ test_frontier = map (\ move -> ((update_game_state startState move), move, (move
 
 --solve :: State -> [Move] -> Mem -> ((Bool, [Move]), Mem)
 --solve (State bd moves) moves_played memory =
---    let hash = hash_board bd in
+--    let hash = hash_b bd in
 --    case (getval hash memory) of
 --        Just result ->
 --            (result, memory)
@@ -327,7 +353,7 @@ test_frontier = map (\ move -> ((update_game_state startState move), move, (move
 --recurse dflt new =
 --    let memory = snd dflt
 --        (result, rMem) = solve (fst new) (snd new) memory
---        hash = hash_board (get_board (fst new))
+--        hash = hash_b (get_board (fst new))
 --        newMemory = insertval hash result rMem
 --        updatedResult = if fst result
 --                            then ((True, (snd result)))
@@ -340,79 +366,159 @@ test_frontier = map (\ move -> ((update_game_state startState move), move, (move
 --    map (\move -> ((update_game_state (State bd moves) move), (move: moves_played))) moves
 
 
---search :: State -> Mem -> Int -> ((Bool, [Move]), Mem)
---search (State board moves) memory depth
---    | depth == 0 = ((False, []), memory)
---    | isJust memo = (fromJust memo, memory)
---    | win (State board moves) = ((True, []), memory)
---    | lose (State board moves) = ((False, []), memory)
---    | otherwise = foldl tryMove ((False, []), memory) moves
---    where
---        hash = hashState board
---        memo = getval hash memory
---        tryMove ((found, moves), newMem) move =
---            if found then ((found, moves), newMem) else
---            let newState = update_game_state (State board moves) move
---                ((result, newMoves), rMem) = search newState newMem (depth - 1)
---                finalMem = insertval hash (result, newMoves) rMem
---            in if result then ((True, move:newMoves), finalMem) else ((found, moves),finalMem)
---        hashState board =
---            hash (map snd $ filter (\(coord, status) -> status /= -1) $ concat board)
---                    where hash xs = foldl' hashStep 0 xs
---                          hashStep a b = 31 * a + b
 
-rotate_board1 board
-   | board == [] = []
-   | otherwise = let (row:rows) = board in row : rotate_board1 rows
+--solve_A :: PQ -> Mem -> (Bool, [Move], Mem)
+--solve_A queue memory =
+--   let (highest, restQueue) = minView queue in
+--   case highest of
+--        Nothing -> (False, [], memory)
+--        Just justState ->
+--            let (state@(State board moves), played) = fromJust justState
+--                hash = hash_b board
+--                memo = getval hash memory in
+--                case memo of
+--                    Just (bool, move) -> (bool, move, memory)
+--                    Nothing ->
+--                        if (win state) then
+--                            (True,played,memory)
+--                        else let newStates = map (\ move -> ((update_game_state state move), played)) moves
+--                                 newHeuristics = map (\ (newState@(State newBoard newM), newPlayed) -> (newState, newPlayed, (heuristic newBoard))) newStates
+--                                 newQueue = foldl (\ pq (st, pl, h) -> add h (State, pl) pq) restQueue newHeuristics
+--                                 (res, mv, rMem) = solve_A newQueue memory in
+--                                    case res of
+--                                        True -> (res, mv, rMem)
+--                                        False -> solve_A newQueue (insertval hash (False, mv) rMem)
 
-rotate_board2 board
-    | board == [] = []
-    | null (head board) = []
-    | otherwise = (map head board) : rotate_board2(map tail board)
+heuristic :: Board -> Int
+heuristic board = maxPegs - numPegs
+  where
+    maxPegs = countValidHoles win_board - 1
+    numPegs = countPegs board
 
-rotate_board3 board = reverse (rotate_board2 board)
+countValidHoles :: Board -> Int
+countValidHoles board = length [h | r <- board, (h, v) <- r, v /= -1]
 
-rotate_board4 board
-    | board == [] = []
-    | otherwise = let (row:rows) = board in (reverse row) : rotate_board4 rows
+countPegs :: Board -> Int
+countPegs board = length [h | r <- board, (h, v) <- r, v == 1]
 
-rotate_board5 board = reverse (rotate_board4 board)
 
-rotate_board6 = map reverse . transpose
+{-search :: State -> Mem -> Int -> ((Bool, [Move]), Mem)
+search (State board moves) memory depth
+    | depth == 0 = ((False, []), memory)
+    | isJust memo =
+        trace("fount cg!")
+        trace("num pegs: " ++ show (length (filter (\entry -> (snd entry) == 1) (concat board))))
+        trace(show (length (tolist memory)))
+        (fromJust memo, memory)
+    | win (State board moves) = ((True, []), memory)
+    | lose (State board moves) = ((False, []), memory)
+    | otherwise = foldl tryMove ((False, []), memory) moves
+    where
+        hash = hash_b board
+        memo = getval hash memory
+        tryMove ((found, moves), newMem) move =
+            if found then ((found, moves), newMem) else
+            let newState = update_game_state (State board moves) move
+                ((result, newMoves), rMem) = search newState newMem (depth - 1)
+                finalMem = insertval hash (result, newMoves) rMem
+            in if result then ((True, move:newMoves), finalMem) else ((found, moves),finalMem)-}
 
-rotate_board7 board = transpose $ rotate_board6 board
 
-rotate_board8 board = transpose $ reverse (rotate_board4 board)
+-- Hash must return the same value for rotationally symmetric boards
+hash_b :: Board -> Int
+hash_b board =
+   let tlbrr = foldl (\acc x -> (2*acc) + x) 0 (top_left_bottom_right_right board)
+       tlbrd = foldl (\acc x -> (2*acc) + x) 0 (top_left_bottom_right_down board)
+       trbld = foldl (\acc x -> (2*acc) + x) 0 (top_right_bottom_left_down board)
+       trbll = foldl (\acc x -> (2*acc) + x) 0 (top_right_bottom_left_left board)
+       brtll = foldl (\acc x -> (2*acc) + x) 0 (bottom_right_top_left_left board)
+       brtlu = foldl (\acc x -> (2*acc) + x) 0 (bottom_right_top_left_up board)
+       bltru = foldl (\acc x -> (2*acc) + x) 0 (bottom_left_top_right_up board)
+       bltrr = foldl (\acc x -> (2*acc) + x) 0 (bottom_left_top_right_right board)
+       minhash = minimum [tlbrr,tlbrd,trbld,trbll,brtll,brtlu,bltru,bltrr]
+       in
+--         trace("tlbrr: "++ showIntAtBase 2 intToDigit tlbrr "")
+--         trace("real : 11100001010011010111101101111111100111000011100 \n")
+--
+--         trace("tlbrd: "++ showIntAtBase 2 intToDigit tlbrd "")
+--         trace("real : 11100001110011001111011111110111100101000011100 \n")
+--
+--         trace("trbld: "++ showIntAtBase 2 intToDigit trbld "")
+--         trace("real : 11100001010011011111011111110011100111000011100 \n")
+--
+--         trace("trbll: "++ showIntAtBase 2 intToDigit trbll "")
+--         trace("real : 11100001010011010111011011111111100111000011100 \n")
+--
+--         trace("brtll: "++ showIntAtBase 2 intToDigit brtll "")
+--         trace("real : 11100001110011111111011011110101100101000011100 \n")
+--
+--         trace("brtlu: "++ showIntAtBase 2 intToDigit brtlu "")
+--         trace("real : 11100001010011110111111101111001100111000011100 \n")
+--
+--         trace("bltru: "++ showIntAtBase 2 intToDigit bltru "")
+--         trace("real : 11100001110011100111111101111101100101000011100 \n")
+--
+--         trace("bltrr: "++ showIntAtBase 2 intToDigit bltrr "")
+--         trace("real : 11100001110011111111101101110101100101000011100 \n")
+--
+--         trace("min : "++ showIntAtBase 2 intToDigit min "")
+--         trace("real: 11100001010011010111011011111111100111000011100 \n")
+         minhash
+top_left_bottom_right_right :: Board -> [Int]
+top_left_bottom_right_right board =
+  let borderless = [init (init (drop 2 row)) | row <- (init (init (drop 2 board)))] in
+    [if (snd(borderless!!row!!col))==0 then 1 else 0 | row <- [0..6], col <- [0..6]]
 
-hash_functions board = [rotate_board1 board, rotate_board2 board, rotate_board3 board, rotate_board4 board, rotate_board5 board, rotate_board6 board, rotate_board7 board, rotate_board8 board]
+top_left_bottom_right_down :: Board -> [Int]
+top_left_bottom_right_down board =
+  let borderless = [init (init (drop 2 row)) | row <- (init (init (drop 2 board)))] in
+    [if (snd(borderless!!row!!col))==0 then 1 else 0 | col <- [0..6],
+                                                       row <- [0..6]]
 
---hash_functions board = [rotate_board1 board]
+top_right_bottom_left_left :: Board -> [Int]
+top_right_bottom_left_left board =
+  let borderless = [init (init (drop 2 row)) | row <- (init (init (drop 2 board)))] in
+    [if (snd(borderless!!row!!col))==0 then 1 else 0 | row <- [0..6],
+                                                       col <- (foldl (flip (:)) [] [0..6])]
 
-test_hash_boards = hash_functions win_board
+top_right_bottom_left_down :: Board -> [Int]
+top_right_bottom_left_down board =
+  let borderless = [init (init (drop 2 row)) | row <- (init (init (drop 2 board)))] in
+    [if (snd(borderless!!row!!col))==0 then 1 else 0 | col <- (foldl (flip (:)) [] [0..6]),
+                                                       row <- [0..6]]
 
-display_hashed_boards = mapM_ display_board test_hash_boards
+bottom_right_top_left_left :: Board -> [Int]
+bottom_right_top_left_left board =
+  let borderless = [init (init (drop 2 row)) | row <- (init (init (drop 2 board)))] in
+    [if (snd(borderless!!row!!col))==0 then 1 else 0 | row <- (foldl (flip (:))) [] [0..6],
+                                                       col <- (foldl (flip (:)) [] [0..6])]
 
-generate_hash :: Board -> Int
-generate_hash board =
-    let collapsed = concat board
-        game_board = drop 22 (take (length collapsed - 22) collapsed)
-        arr = (map (\ (coord, status) -> if (status == -1) then 0 else status) game_board) in
-        foldl (\ num x -> num * 2 + x) 0 arr
+bottom_right_top_left_up :: Board -> [Int]
+bottom_right_top_left_up board =
+  let borderless = [init (init (drop 2 row)) | row <- (init (init (drop 2 board)))] in
+    [if (snd(borderless!!row!!col))==0 then 1 else 0 | col <- (foldl (flip (:)) [] [0..6]),
+                                                       row <- (foldl (flip (:))) [] [0..6]]
 
-hash_board board =
-    let boards = hash_functions board
-        hashes = map generate_hash boards in
-        minimum hashes
+bottom_left_top_right_up :: Board -> [Int]
+bottom_left_top_right_up board =
+  let borderless = [init (init (drop 2 row)) | row <- (init (init (drop 2 board)))] in
+    [if (snd(borderless!!row!!col))==0 then 1 else 0 | col <- [0..6],
+                                                       row <- (foldl (flip (:))) [] [0..6]]
+
+bottom_left_top_right_right :: Board -> [Int]
+bottom_left_top_right_right board =
+  let borderless = [init (init (drop 2 row)) | row <- (init (init (drop 2 board)))] in
+    [if (snd(borderless!!row!!col))==0 then 1 else 0 | row <- (foldl (flip (:))) [] [0..6],
+                                                       col <- [0..6]]
 
 
 parse_move :: [Move] -> IO Move
 parse_move moves =
     do
-        putStrLn (show moves)
-        putStrLn "Please enter the starting coordinate of the move:"
-        startCoord <- get_coordinate
-        putStrLn "Please enter the ending coordinate of the move:"
-        endCoord <- get_coordinate
+        putStrLn "Please enter the starting coordinate of the move, or (H)int to see available moves:"
+        startCoord <- get_coordinate moves
+        putStrLn "Please enter the ending coordinate of the move, or (H)int to see a available moves:"
+        endCoord <- get_coordinate moves
         let move = get_move startCoord endCoord moves
         if isJust move then do
             return (fromJust move)
@@ -432,16 +538,21 @@ get_move start end  moves =
             Nothing
 
 
-get_coordinate ::  IO String
-get_coordinate =
+get_coordinate :: [Move] -> IO String
+get_coordinate moves =
     do
-      coord <- getLine
-      if not (check_valid_coord coord) then do
-         let line = (coord ++ " is not a valid coordinate. Please try again:")
-         putStrLn line
-         coord <- get_coordinate
-         return coord
-      else return coord
+        coordWithDel <- getLine
+        let coord = fixdel coordWithDel
+        if (coord == "Hint" || coord == "hint" || coord == "H" || coord == "h") then do
+           putStrLn (show moves)
+           coord <- get_coordinate moves
+           return coord
+        else if not (check_valid_coord coord) then do
+            let line = (coord ++ " is not a valid coordinate. Please try again:")
+            putStrLn line
+            coord <- get_coordinate moves
+            return coord
+        else return coord
 
 
 display_board :: Board -> IO()
@@ -459,6 +570,25 @@ display_board board =
                                                   else "o"
                                                   | (x,y) <- borderless!!row]) | row<-[0..6]]))
 
+display_move :: Board -> Move -> IO ()
+display_move board (start, middle, end) =
+  do
+     let
+         borderless = [init (init (drop 2 row)) | row <- (init (init (drop 2 board)))]
+     putStrLn "   1 2 3 4 5 6 7"
+     putStrLn (foldl (\acc (l, row) -> acc ++ l ++ "  " ++ row ++ "\n")
+                     ""
+                     (zip [['A'],['B'],['C'],['D'],['E'],['F'],['G']]
+                          [(unwords [if y == -1
+                                      then " "
+                                        else if (x==start || x==middle)
+                                                then "x"
+                                             else if (x==end)
+                                                then "*"
+                                             else if y == 1
+                                                then "."
+                                                  else "o"
+                                                  | (x,y) <- borderless!!row]) | row<-[0..6]]))
 
 --get_move :: IO () -> Move
 --get_move =
