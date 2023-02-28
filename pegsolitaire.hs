@@ -426,6 +426,28 @@ lose (State board moves) =
     (length moves) == 0
 
 ----------------------- SOLVER(s) ----------------------------
+-- A DFS search that uses a HashTreeDict to memoize results
+search :: State -> Mem -> Int -> ((Bool, [Move]), Mem)
+search (State board moves) memory depth
+    | depth == 0 = ((False, []), memory)
+    | isJust memo =
+        trace("fount cg!")
+        trace("num pegs: " ++ show (length (filter (\entry -> (snd entry) == 1) (concat board))))
+        trace(show (length (tolist memory)))
+        (fromJust memo, memory)
+    | win (State board moves) = ((True, []), memory)
+    | lose (State board moves) = ((False, []), memory)
+    | otherwise = foldl tryMove ((False, []), memory) moves
+    where
+        hash = hashBoard board
+        memo = getval hash memory
+        tryMove ((found, mvs), newMem) move =
+            if found then ((found, mvs), newMem) else
+            let newState = updateGameState (State board moves) move
+                ((result, newMoves), rMem) = search newState newMem (depth - 1)
+                finalMem = insertval hash (result, newMoves) rMem
+            in if result then ((True, (move:newMoves)), finalMem) else ((found, moves),finalMem)
+
 -- Here we have a few different solvers that we can use to solve the game
 -- A DFS solver
 nateSolve :: State -> [Move] -> [Int] -> (Bool, [Move], [Int])
@@ -504,9 +526,9 @@ heuristicSearch currentQueue memory =
                             (case res of
                                 True -> (True, rPlayed, rMem, rPQ)
                                 False -> heuristicSearch queue (insertval hash (False, []) rMem))
-
 solve_h state = heuristicSearch (PQ.singleton (0, (state, []))) emptyDict
 
+-- Manhattan distance
 heuristicValue :: Board -> Int
 heuristicValue board = sum [distanceToCenter coord | (coord, status) <- concat (drop 2 (take (length board - 2) board)), status == 1]
   where
@@ -520,27 +542,7 @@ heuristicValue board = sum [distanceToCenter coord | (coord, status) <- concat (
         row = ord (head coord) - 64
         col = read (tail coord) :: Int
 
--- A DFS search that uses a HashTreeDict to memoize results
-search :: State -> Mem -> Int -> ((Bool, [Move]), Mem)
-search (State board moves) memory depth
-    | depth == 0 = ((False, []), memory)
-    | isJust memo =
-        trace("fount cg!")
-        trace("num pegs: " ++ show (length (filter (\entry -> (snd entry) == 1) (concat board))))
-        trace(show (length (tolist memory)))
-        (fromJust memo, memory)
-    | win (State board moves) = ((True, []), memory)
-    | lose (State board moves) = ((False, []), memory)
-    | otherwise = foldl tryMove ((False, []), memory) moves
-    where
-        hash = hashBoard board
-        memo = getval hash memory
-        tryMove ((found, mvs), newMem) move =
-            if found then ((found, mvs), newMem) else
-            let newState = updateGameState (State board moves) move
-                ((result, newMoves), rMem) = search newState newMem (depth - 1)
-                finalMem = insertval hash (result, newMoves) rMem
-            in if result then ((True, (move:newMoves)), finalMem) else ((found, moves),finalMem)
+
 
 -- Hash must return the same value for rotationally symmetric boards
 -- Hashing technique taken from https://ece.uwaterloo.ca/~dwharder/aads/Algorithms/Backtracking/Peg_solitaire/
