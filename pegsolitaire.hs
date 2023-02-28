@@ -203,7 +203,7 @@ solveState state choice =
 			displayBoard (getBoard state)
 	else do
 		putStrLn "That is not a valid choice, please try again"
-		putStrLn "What implementation would you like to use? (DFS(Tree)/DFS(List)/BestFS(Manhattan))"
+		putStrLn "What implementation would you like to use? ((1) DFS(Tree) / (2) DFS(List) / (3) BestFS(Manhattan))"
 		choiceUnFixed <- getLine
 		let choice = fixdel choiceUnFixed
 		solve_state state choice
