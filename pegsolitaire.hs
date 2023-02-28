@@ -29,7 +29,9 @@ type Mem = Dict Int (Bool, [Move])
 
 type Pq = PQ.MinQueue (Int, (State, [Move]))
 
-
+-- USAGE --
+-- To play from the start, use > playGame
+-- To play from a state that is partially solved, use > play partialGameState
 
 --------- SAMPLE BOARDS ---------
 startingBoard :: Board -- Board used to start the game
@@ -254,7 +256,6 @@ modifyPoardPosition board coord newState =
       newRow = start ++ ((fst elem), newState) : rest -- Modify the row and splice it together
       (firstRows,_:restRows) = splitAt (row+2) board -- Split the list of rows
   in  firstRows ++ [newRow] ++ restRows -- Replace the old row with the new row
-
 
 
 ------- Generating lists of moves -------
