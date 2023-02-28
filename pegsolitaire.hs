@@ -167,19 +167,47 @@ continue newState = do
                else if (choice == "Finish" || choice == "F" || choice == "f") then do
                    putStrLn "This may take a while, are you sure? (y/n)"
                    ans <- getLine
-                   if (ans == "y" || ans == "Y" || ans == "Yes") then
-                       let ((bool, moves), mem) = search newState emptyDict 31 in do
-                       if (bool == True) then
-                            displayAllMoves newState moves
-                        else do
-                            putStrLn "This board is not solvable"
-                            displayBoard (getBoard newState)
+                   if (ans == "y" || ans == "Y" || ans == "Yes") then do
+					   putStrLn "What implementation would you like to use? ((1) DFS(Tree) / (2) DFS(List) / (3) BestFS(Manhattan))"
+					   choiceUnFixed <- getLine
+					   let choice = fixdel choiceUnFixed
+					   solve_state newState choice
                    else do
                         continue newState
                else do
                     putStrLn "That is not a valid choice, please try again"
                     continue newState
 
+solveState :: State -> String -> IO ()
+solveState state choice =
+	if (choice == "DFS(Tree)" || choice == "1") then
+		let ((bool, moves), mem) = search state emptyDict 31 in do
+		if (bool == True) then do
+			displayAllMoves state moves
+		else do
+			putStrLn "This board is not solvable"
+			displayBoard (getBoard state)
+	else if (choice == "DFS(List)" || choice == "2") then
+		let (bool, moves, mem) = nateSolve state [] [] in do
+		if (bool == True) then do
+			displayAllMoves state moves
+		else do
+			putStrLn "This board is not solvable"
+			displayBoard (getBoard state)
+	else if (choice == "BestFS(Manhattan)" || choice == "3") then
+		let (bool, moves, mem, queue) = solve_h state in do
+		if (bool == True) then do
+			displayAllMoves state moves
+		else do
+			putStrLn "This board is not solvable"
+			displayBoard (getBoard state)
+	else do
+		putStrLn "That is not a valid choice, please try again"
+		putStrLn "What implementation would you like to use? (DFS(Tree)/DFS(List)/BestFS(Manhattan))"
+		choiceUnFixed <- getLine
+		let choice = fixdel choiceUnFixed
+		solve_state state choice
+	
 -- Prompts the user to enter the coordinates of a move
 -- Returns the move if it is in the list of available moves, otherwise prompts the user to try again
 parseMove :: [Move] -> IO Move
@@ -431,9 +459,9 @@ search :: State -> Mem -> Int -> ((Bool, [Move]), Mem)
 search (State board moves) memory depth
     | depth == 0 = ((False, []), memory)
     | isJust memo =
-        trace("fount cg!")
-        trace("num pegs: " ++ show (length (filter (\entry -> (snd entry) == 1) (concat board))))
-        trace(show (length (tolist memory)))
+        --trace("fount cg!")
+        --trace("num pegs: " ++ show (length (filter (\entry -> (snd entry) == 1) (concat board))))
+        trace(("Number of boards tried: " ++ show (length (tolist memory))))
         (fromJust memo, memory)
     | win (State board moves) = ((True, []), memory)
     | lose (State board moves) = ((False, []), memory)
@@ -516,7 +544,7 @@ heuristicSearch currentQueue memory =
                 case memo of
                    Just (bool, move) ->
                        --trace("hash is" ++ show hash)
-                       trace(show (length (tolist memory)))
+                       trace("Number of boards tried: " ++ show (length (tolist memory)))
                        (bool, [], memory, queue)
                    Nothing ->
                         let newStates = map (\ move -> (updateGameState currState move, move)) avail
